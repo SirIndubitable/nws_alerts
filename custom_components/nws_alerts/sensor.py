@@ -1,30 +1,17 @@
 import logging
-import uuid
 
-import voluptuous as vol
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_NAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from . import AlertsDataUpdateCoordinator
 from .const import (
     ATTRIBUTION,
-    CONF_GPS_LOC,
-    CONF_INTERVAL,
-    CONF_TIMEOUT,
-    CONF_TRACKER,
-    CONF_ZONE_ID,
     COORDINATOR,
     DEFAULT_ICON,
-    DEFAULT_INTERVAL,
-    DEFAULT_NAME,
-    DEFAULT_TIMEOUT,
     DOMAIN,
 )
 
@@ -89,7 +76,6 @@ class NWSAlertSensor(CoordinatorEntity):
             return attrs
 
         attrs[ATTR_ATTRIBUTION] = ATTRIBUTION
-        x = 0
         if "alerts" in self.coordinator.data:
             attrs["Alerts"] = self.coordinator.data["alerts"]
         return attrs

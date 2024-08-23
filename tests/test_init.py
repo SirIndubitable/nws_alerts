@@ -1,15 +1,10 @@
 """Tests for init."""
 
-from unittest.mock import patch
-
 import pytest
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_NAME
-from homeassistant.helpers.entity_registry import async_get
-from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.nws_alerts.const import CONF_ZONE_ID, DOMAIN
+from custom_components.nws_alerts.const import DOMAIN
 from tests.const import CONFIG_DATA, CONFIG_DATA_3
 
 pytestmark = pytest.mark.asyncio
@@ -18,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 async def test_setup_entry(
     hass,
 ):
-    """Test settting up entities."""
+    """Test setting up entities."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="NWS Alerts",

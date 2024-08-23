@@ -11,7 +11,6 @@ from homeassistant import config_entries
 from homeassistant.components.device_tracker import DOMAIN as TRACKER_DOMAIN
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     API_ENDPOINT,
@@ -36,12 +35,14 @@ MENU_OPTIONS = ["zone", "gps"]
 MENU_GPS = ["gps_loc", "gps_tracker"]
 
 
-def _get_schema_zone(hass: Any, user_input: list, default_dict: list) -> Any:
+def _get_schema_zone(
+    hass: Any, user_input: dict[str, Any] | None, default_dict: dict[str, Any]
+) -> Any:
     """Gets a schema using the default_dict as a backup."""
     if user_input is None:
         user_input = {}
 
-    def _get_default(key):
+    def _get_default(key: str) -> Any:
         """Gets default value for key."""
         return user_input.get(key, default_dict.get(key))
 
@@ -55,12 +56,14 @@ def _get_schema_zone(hass: Any, user_input: list, default_dict: list) -> Any:
     )
 
 
-def _get_schema_gps(hass: Any, user_input: list, default_dict: list) -> Any:
+def _get_schema_gps(
+    hass: Any, user_input: dict[str, Any] | None, default_dict: dict[str, Any]
+) -> Any:
     """Gets a schema using the default_dict as a backup."""
     if user_input is None:
         user_input = {}
 
-    def _get_default(key):
+    def _get_default(key: str) -> Any:
         """Gets default value for key."""
         return user_input.get(key, default_dict.get(key))
 
@@ -74,12 +77,14 @@ def _get_schema_gps(hass: Any, user_input: list, default_dict: list) -> Any:
     )
 
 
-def _get_schema_tracker(hass: Any, user_input: list, default_dict: list) -> Any:
+def _get_schema_tracker(
+    hass: Any, user_input: dict[str, Any] | None, default_dict: dict[str, Any]
+) -> Any:
     """Gets a schema using the default_dict as a backup."""
     if user_input is None:
         user_input = {}
 
-    def _get_default(key: str, fallback_default: Any = None) -> None:
+    def _get_default(key: str, fallback_default: Any = None) -> Any:
         """Gets default value for key."""
         return user_input.get(key, default_dict.get(key, fallback_default))
 
@@ -98,8 +103,8 @@ def _get_schema_tracker(hass: Any, user_input: list, default_dict: list) -> Any:
 def _get_entities(
     hass: HomeAssistant,
     domain: str,
-    search: List[str] = None,
-    extra_entities: List[str] = None,
+    search: List[str] | None = None,
+    extra_entities: List[str] | None = None,
 ) -> List[str]:
     data = ["(none)"]
     if domain not in hass.data:
@@ -116,7 +121,7 @@ def _get_entities(
     return data
 
 
-async def _get_zone_list(self) -> list | None:
+async def _get_zone_list(self) -> str | None:
     """Return list of zone by lat/lon"""
 
     data = None
@@ -141,8 +146,8 @@ async def _get_zone_list(self) -> list | None:
                 zone_list.append(data[JSON_FEATURES][x][JSON_PROPERTIES][JSON_ID])
                 x += 1
             _LOGGER.debug("Zones list: %s", zone_list)
-            zone_list = ",".join(str(x) for x in zone_list)  # convert list to str
-            return zone_list
+            zone_str = ",".join(str(x) for x in zone_list)  # convert list to str
+            return zone_str
     return None
 
 
@@ -157,6 +162,8 @@ class NWSAlertsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self._data = {}
         self._errors = {}
+        self._gps_loc = None
+        self._zone_list = None
 
     # async def async_step_import(self, user_input: dict[str, Any]) -> FlowResult:
     #     """Import a config entry."""
@@ -169,13 +176,13 @@ class NWSAlertsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle the flow initialized by the user."""
         return self.async_show_menu(step_id="user", menu_options=MENU_OPTIONS)
 
     async def async_step_gps(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle the flow initialized by the user."""
         return self.async_show_menu(step_id="gps", menu_options=MENU_GPS)
 

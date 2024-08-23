@@ -6,7 +6,7 @@ from homeassistant.util import slugify
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.nws_alerts.const import DOMAIN
-from tests.const import CONFIG_DATA, CONFIG_DATA_2, CONFIG_DATA_BAD
+from tests.const import CONFIG_DATA, CONFIG_DATA_2
 
 pytestmark = pytest.mark.asyncio
 

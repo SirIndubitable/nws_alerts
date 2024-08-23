@@ -3,95 +3,50 @@
 from unittest.mock import patch
 
 import pytest
-from homeassistant import config_entries, data_entry_flow, setup
-from homeassistant.const import CONF_NAME
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant import config_entries, setup
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.nws_alerts.const import CONF_ZONE_ID, DOMAIN
-from tests.const import CONFIG_DATA
+from custom_components.nws_alerts.const import DOMAIN
 
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.parametrize(
-    "input,step_id,title,data",
+    "steps,title,data",
     [
         (
+            "Zone Form",
+            [
+                {"next_step_id": "zone"},
+                {
+                    "name": "Zone Form",
+                    "zone_id": "AZZ540,AZC013",
+                    "interval": 5,
+                    "timeout": 120,
+                },
+            ],
             {
-                "name": "Testing Alerts",
-                "zone_id": "AZZ540,AZC013",
-                "interval": 5,
-                "timeout": 120,
-            },
-            "zone",
-            "Testing Alerts",
-            {
-                "name": "Testing Alerts",
+                "name": "Zone Form",
                 "zone_id": "AZZ540,AZC013",
                 "interval": 5,
                 "timeout": 120,
             },
         ),
-    ],
-)
-async def test_form_zone(
-    input,
-    step_id,
-    title,
-    data,
-    hass,
-):
-    """Test we get the form."""
-    await setup.async_setup_component(hass, "persistent_notification", {})
-    with patch(
-        "custom_components.nws_alerts.config_flow._get_zone_list", return_value=None
-    ):
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-        assert result["type"] == FlowResultType.MENU
-        # assert result["title"] == title_1
-
-    with patch(
-        "custom_components.nws_alerts.async_setup_entry",
-        return_value=True,
-    ) as mock_setup_entry, patch(
-        "custom_components.nws_alerts.config_flow._get_zone_list", return_value=None
-    ):
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"next_step_id": "zone"}
-        )
-        await hass.async_block_till_done()
-
-        assert result["type"] == FlowResultType.FORM
-
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], input
-        )
-
-        assert result2["type"] == "create_entry"
-        assert result2["title"] == title
-        assert result2["data"] == data
-
-        await hass.async_block_till_done()
-        assert len(mock_setup_entry.mock_calls) == 1
-
-
-@pytest.mark.parametrize(
-    "input,step_id,title,data",
-    [
         (
+            "GPS Form",
+            [
+                {"next_step_id": "gps"},
+                {"next_step_id": "gps_loc"},
+                {
+                    "name": "GPS Form",
+                    "gps_loc": "123,-456",
+                    "interval": 5,
+                    "timeout": 120,
+                },
+            ],
             {
-                "name": "Testing Alerts",
-                "gps_loc": "123,-456",
-                "interval": 5,
-                "timeout": 120,
-            },
-            "gps_loc",
-            "Testing Alerts",
-            {
-                "name": "Testing Alerts",
+                "name": "GPS Form",
                 "gps_loc": "123,-456",
                 "interval": 5,
                 "timeout": 120,
@@ -99,49 +54,42 @@ async def test_form_zone(
         ),
     ],
 )
-async def test_form_gps(
-    input,
-    step_id,
-    title,
-    data,
-    hass,
+async def test_form(
+    title: str,
+    steps: list,
+    data: dict,
+    hass: HomeAssistant,
 ):
     """Test we get the form."""
     await setup.async_setup_component(hass, "persistent_notification", {})
-    with patch(
-        "custom_components.nws_alerts.config_flow._get_zone_list", return_value=None
+
+    with (
+        patch(
+            "custom_components.nws_alerts.config_flow._get_zone_list", return_value=None
+        ),
+        patch(
+            "custom_components.nws_alerts.async_setup_entry",
+            return_value=True,
+        ) as mock_setup_entry,
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] == FlowResultType.MENU
-        # assert result["title"] == title_1
 
-    with patch(
-        "custom_components.nws_alerts.async_setup_entry",
-        return_value=True,
-    ) as mock_setup_entry, patch(
-        "custom_components.nws_alerts.config_flow._get_zone_list", return_value=None
-    ):
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"next_step_id": "gps"}
-        )
-        await hass.async_block_till_done()
+        for index, step in enumerate(steps):
+            if index == (len(steps) - 1):
+                assert result["type"] == FlowResultType.FORM
+            else:
+                assert result["type"] == FlowResultType.MENU
 
-        assert result["type"] == FlowResultType.MENU
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"next_step_id": "gps_loc"}
-        )
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], step
+            )
+            await hass.async_block_till_done()
 
-        assert result["type"] == FlowResultType.FORM
-
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], input
-        )
-
-        assert result2["type"] == "create_entry"
-        assert result2["title"] == title
-        assert result2["data"] == data
+        assert result["title"] == title
+        assert result["type"] == "create_entry"
+        assert result["data"] == data
 
         await hass.async_block_till_done()
         assert len(mock_setup_entry.mock_calls) == 1

@@ -4,6 +4,7 @@ import hashlib
 import logging
 import uuid
 from datetime import timedelta
+from typing import Any
 
 import aiohttp
 from async_timeout import timeout
@@ -40,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     """Load the saved entities."""
     # Print startup message
     _LOGGER.info(
-        "Version %s is starting, if you have any issues please report" " them here: %s",
+        "Version %s is starting, if you have any issues please report them here: %s",
         VERSION,
         ISSUE_URL,
     )
@@ -67,12 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     config_entry.add_update_listener(update_listener)
 
     # Setup the data coordinator
-    coordinator = AlertsDataUpdateCoordinator(
-        hass,
-        config_entry.data,
-        config_entry.data.get(CONF_TIMEOUT),
-        config_entry.data.get(CONF_INTERVAL),
-    )
+    coordinator = AlertsDataUpdateCoordinator(hass, config_entry.data)
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_refresh()
@@ -136,11 +132,11 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 class AlertsDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching NWS Alert data."""
 
-    def __init__(self, hass, config, the_timeout: int, interval: int):
+    def __init__(self, hass, config):
         """Initialize."""
-        self.interval = timedelta(minutes=interval)
+        self.interval = timedelta(minutes=config[CONF_INTERVAL])
         self.name = config[CONF_NAME]
-        self.timeout = the_timeout
+        self.timeout = config[CONF_TIMEOUT]
         self.config = config
         self.hass = hass
 
@@ -216,7 +212,7 @@ async def async_get_state(config, coords) -> dict:
             if r.status == 200:
                 data = await r.json()
             else:
-                _LOGGER.error("Problem updating NWS data: (%s) - %s", r.status, r.body)
+                _LOGGER.error("Problem updating NWS data: (%s) - %s", r.status, r._body)
 
     if data is not None:
         # Reset values before reassigning
@@ -235,7 +231,7 @@ async def async_get_alerts(zone_id: str = "", gps_loc: str = "") -> dict:
     """Query API for Alerts."""
 
     url = ""
-    alerts = {}
+    alerts: dict[str, Any] = {}
     headers = {"User-Agent": USER_AGENT, "Accept": "application/geo+json"}
     data = None
 
@@ -251,7 +247,7 @@ async def async_get_alerts(zone_id: str = "", gps_loc: str = "") -> dict:
             if r.status == 200:
                 data = await r.json()
             else:
-                _LOGGER.error("Problem updating NWS data: (%s) - %s", r.status, r.body)
+                _LOGGER.error("Problem updating NWS data: (%s) - %s", r.status, r._body)
 
     if data is not None:
         features = data["features"]
@@ -261,10 +257,10 @@ async def async_get_alerts(zone_id: str = "", gps_loc: str = "") -> dict:
             tmp_dict = {}
 
             # Generate stable Alert ID
-            id = await generate_id(alert["id"])
+            alert_id = await generate_id(alert["id"])
 
-            tmp_dict["Event"] =  alert["properties"]["event"]
-            tmp_dict["ID"] = id
+            tmp_dict["Event"] = alert["properties"]["event"]
+            tmp_dict["ID"] = alert_id
             tmp_dict["URL"] = alert["id"]
 
             event = alert["properties"]["event"]
@@ -272,7 +268,7 @@ async def async_get_alerts(zone_id: str = "", gps_loc: str = "") -> dict:
                 tmp_dict["Headline"] = alert["properties"]["parameters"]["NWSheadline"][0]
             else:
                 tmp_dict["Headline"] = event
-            
+
             tmp_dict["Type"] = alert["properties"]["messageType"]
             tmp_dict["Status"] = alert["properties"]["status"]
             tmp_dict["Severity"] = alert["properties"]["severity"]
